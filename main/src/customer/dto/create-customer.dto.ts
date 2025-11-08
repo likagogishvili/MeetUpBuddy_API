@@ -9,4 +9,17 @@ export class CreateCustomerDto {
 
   @ApiProperty({ example: 25, description: 'Age of the user' })
   age: number;
+
+  @ApiProperty({
+    example: 'john.doe@example.com',
+    description: 'Email address of the user',
+  })
+  email: string;
+
+  @ApiProperty({
+    example: 'password123',
+    description: 'Password for the user account',
+    minLength: 6,
+  })
+  password: string;
 }

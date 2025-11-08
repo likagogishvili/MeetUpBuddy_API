@@ -4,6 +4,8 @@ import { ConfigModule } from '@nestjs/config';
 import { RedisOptions } from './redis/constants/redis-options.constants';
 import { RedisModule } from './redis/redis.module';
 import { CustomerModule } from './customer/customer.module';
+import { NoteModule } from './note/note.module';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
@@ -11,6 +13,8 @@ import { CustomerModule } from './customer/customer.module';
     CacheModule.registerAsync(RedisOptions),
     RedisModule,
     CustomerModule,
+    NoteModule,
+    AuthModule,
   ],
   controllers: [],
   providers: [],
