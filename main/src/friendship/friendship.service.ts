@@ -376,11 +376,19 @@ export class FriendshipService {
 
     // Check if request already sent from this user
     const sentRequest = await this.getFriendRequest(userId, friendId);
-    const hasSentRequest = !!sentRequest;
+    if (sentRequest) {
+      throw new ConflictException(
+        'Friend request already sent. Please wait for response.',
+      );
+    }
 
     // Check if request already received from this friend
     const receivedRequest = await this.getFriendRequest(friendId, userId);
-    const hasReceivedRequest = !!receivedRequest;
+    if (receivedRequest) {
+      throw new ConflictException(
+        'You already have a pending friend request from this user. Please accept or decline it first.',
+      );
+    }
 
     // Remove password from response
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -389,11 +397,7 @@ export class FriendshipService {
     return {
       message: 'User found',
       user: userWithoutPassword,
-      isFriend: false,
-      hasSentRequest,
-      hasReceivedRequest,
-      friendshipStatus: friendship?.status || null,
-      canSendRequest: !hasSentRequest && !hasReceivedRequest,
+      canSendRequest: true,
     };
   }
 

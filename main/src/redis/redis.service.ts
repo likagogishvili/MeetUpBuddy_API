@@ -19,7 +19,11 @@ export class RedisService {
   });
   async setData(key: string, data: any) {
     await this.redisClient.set(key, JSON.stringify(data));
-    this.eventEmitter.emit('createCustomer', { data });
+    
+    // Only emit createCustomer event for customer data
+    if (key.startsWith('customer:')) {
+      this.eventEmitter.emit('createCustomer', { data });
+    }
 
     return { message: `Data stored in Redis under key '${key}'` };
   }
