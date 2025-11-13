@@ -45,10 +45,14 @@ This project consists of three microservices:
 - ✅ Mutual request auto-accept
 - ✅ Prevent duplicate requests
 
-### Calendar Availability
+### Calendar Availability & Event Requests
 - ✅ Check if friend is available on specific date
-- ✅ Request calendar events with friends
+- ✅ Send event requests to friends when creating events
+- ✅ Accept or decline event requests from friends
+- ✅ View sent and received event requests
+- ✅ Auto-create events in both calendars when request is accepted
 - ✅ View conflicting events
+- ✅ Availability checking before sending requests
 
 ## 📋 Prerequisites
 
@@ -188,8 +192,12 @@ http://localhost:4001/api
 - `POST /friendship/respond/:userId` - Accept/reject friend request
 - `GET /friendship/friends/:userId` - Get all friends
 - `GET /friendship/requests/:userId/:type` - Get friend requests (sent/received)
-- `POST /friendship/check-availability/:userId` - Check friend availability
-- `POST /friendship/request-event/:userId` - Request calendar event with friend
+
+### Event Requests
+- `POST /friendship/request-event/:userId` - Send event request to friend (checks availability)
+- `GET /friendship/event-requests/:userId/:type` - Get event requests (sent/received)
+- `POST /friendship/respond-event/:userId` - Accept/decline event request
+- `POST /friendship/check-availability/:userId` - Check friend availability on specific date
 
 ## 📝 Example Requests
 
@@ -235,6 +243,41 @@ curl -X POST http://localhost:4001/friendship/request/user-uuid \
   -d '{
     "email": "friend@example.com"
   }'
+```
+
+### Send Event Request to Friend
+```bash
+curl -X POST http://localhost:4001/friendship/request-event/user-uuid \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <token>" \
+  -d '{
+    "email": "friend@example.com",
+    "title": "Coffee Meeting",
+    "description": "Let'\''s catch up over coffee",
+    "date": "2024-12-25T10:00:00Z"
+  }'
+```
+
+### Accept Event Request
+```bash
+curl -X POST http://localhost:4001/friendship/respond-event/user-uuid \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <token>" \
+  -d '{
+    "requestId": "request-uuid",
+    "accept": true
+  }'
+```
+
+### Get Event Requests
+```bash
+# Get received event requests
+curl -X GET http://localhost:4001/friendship/event-requests/user-uuid/received \
+  -H "Authorization: Bearer <token>"
+
+# Get sent event requests
+curl -X GET http://localhost:4001/friendship/event-requests/user-uuid/sent \
+  -H "Authorization: Bearer <token>"
 ```
 
 ## 🗂️ Project Structure
