@@ -343,10 +343,125 @@ export class FriendshipService {
 
     await this.redisService.setData(requestKey, request);
 
+    // Add to user's received requests index
+    await this.addToUserEventRequests(friendId, requestId, 'received');
+    // Add to sender's sent requests index
+    await this.addToUserEventRequests(userId, requestId, 'sent');
+
     return {
       message: 'Calendar event request sent to friend',
       request,
       availability,
+    };
+  }
+
+  async getEventRequests(userId: string, type: 'sent' | 'received' = 'received') {
+    const keys = await this.redisService.getKeys();
+    const userRequestKeys = keys.filter((key) =>
+      key.startsWith(`userEventRequests:${userId}:${type}:`),
+    );
+
+    const requestIds = await Promise.all(
+      userRequestKeys.map(async (key) => {
+        const data = await this.redisService.getData(key);
+        return data?.requestId;
+      }),
+    );
+
+    const requests = await Promise.all(
+      requestIds
+        .filter((id) => id)
+        .map((id) => this.redisService.getData(`calendarRequest:${id}`)),
+    );
+
+    const filteredRequests = requests.filter(
+      (r) => r && r.status === 'pending',
+    );
+
+    // Get user details
+    const requestsWithUsers = await Promise.all(
+      filteredRequests.map(async (request) => {
+        const user = await this.customerService.findOne(
+          type === 'received' ? request.fromUserId : request.toUserId,
+        );
+
+        return {
+          ...request,
+          fromUser: user.message ? null : user,
+        };
+      }),
+    );
+
+    return {
+      message: `${type} event requests`,
+      requests: requestsWithUsers,
+    };
+  }
+
+  async respondToEventRequest(
+    userId: string,
+    requestId: string,
+    accept: boolean,
+  ) {
+    const requestKey = `calendarRequest:${requestId}`;
+    const request = await this.redisService.getData(requestKey);
+
+    if (!request) {
+      throw new NotFoundException('Event request not found');
+    }
+
+    if (request.toUserId !== userId) {
+      throw new BadRequestException('You are not authorized to respond to this request');
+    }
+
+    if (request.status !== 'pending') {
+      throw new BadRequestException('Request has already been responded to');
+    }
+
+    // Update request status
+    const updatedRequest = {
+      ...request,
+      status: accept ? 'accepted' : 'declined',
+      respondedAt: new Date().toISOString(),
+    };
+
+    await this.redisService.setData(requestKey, updatedRequest);
+
+    if (accept) {
+      // Create event in both calendars
+      const eventDate = new Date(request.eventData.date);
+      
+      const eventData = {
+        title: request.eventData.title,
+        description: request.eventData.description,
+        date: eventDate.toISOString(),
+      };
+
+      // Create event for the friend who received the request (userId - the one accepting)
+      const event1 = await this.noteService.create({
+        ...eventData,
+        customerId: userId,
+      });
+
+      // Create event for the friend who sent the request (fromUserId - the requester)
+      const event2 = await this.noteService.create({
+        ...eventData,
+        customerId: request.fromUserId,
+      });
+
+      return {
+        message: 'Event request accepted. Event added to both calendars.',
+        request: updatedRequest,
+        events: {
+          acceptedBy: event1,
+          requestedBy: event2,
+        },
+      };
+    }
+
+    return {
+      message: 'Event request declined',
+      request: updatedRequest,
     };
   }
 
@@ -431,6 +546,15 @@ export class FriendshipService {
     type: 'sent' | 'received',
   ) {
     const key = `userRequests:${userId}:${type}:${requestId}`;
+    await this.redisService.setData(key, { requestId });
+  }
+
+  private async addToUserEventRequests(
+    userId: string,
+    requestId: string,
+    type: 'sent' | 'received',
+  ) {
+    const key = `userEventRequests:${userId}:${type}:${requestId}`;
     await this.redisService.setData(key, { requestId });
   }
 }

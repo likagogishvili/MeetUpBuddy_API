@@ -129,6 +129,51 @@ export class FriendshipController {
     });
   }
 
+  @Get('event-requests/:userId/:type')
+  @ApiOperation({
+    summary: 'Get event requests (sent or received)',
+  })
+  @ApiParam({ name: 'userId', description: 'ID of the user' })
+  @ApiParam({
+    name: 'type',
+    description: 'Type of requests: sent or received',
+    enum: ['sent', 'received'],
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Event requests retrieved successfully',
+  })
+  getEventRequests(
+    @Param('userId') userId: string,
+    @Param('type') type: 'sent' | 'received',
+  ) {
+    return this.friendshipService.getEventRequests(userId, type);
+  }
+
+  @Post('respond-event/:userId')
+  @ApiOperation({
+    summary: 'Accept or decline an event request',
+  })
+  @ApiParam({ name: 'userId', description: 'ID of the user responding' })
+  @ApiResponse({
+    status: 200,
+    description: 'Event request responded to successfully',
+  })
+  respondToEventRequest(
+    @Param('userId') userId: string,
+    @Body()
+    body: {
+      requestId: string;
+      accept: boolean;
+    },
+  ) {
+    return this.friendshipService.respondToEventRequest(
+      userId,
+      body.requestId,
+      body.accept,
+    );
+  }
+
   @Post('search/:userId')
   @ApiOperation({ summary: 'Search for a user by email' })
   @ApiParam({ name: 'userId', description: 'ID of the user searching' })
